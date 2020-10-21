@@ -3,8 +3,6 @@ package com.demo.myflower.screens;
  */
 
 import android.app.Application;
-import android.os.AsyncTask;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.lifecycle.AndroidViewModel;
@@ -19,87 +17,74 @@ import com.demo.myflower.pojo.Flower;
 import java.util.List;
 
 import io.reactivex.android.schedulers.AndroidSchedulers;
-import io.reactivex.disposables.Disposable;
-import io.reactivex.functions.Consumer;
+import io.reactivex.disposables.CompositeDisposable;
 import io.reactivex.schedulers.Schedulers;
 
 public class FlowerViewModel extends AndroidViewModel {
-    private static AppDatabase db;
-    private LiveData<List<Flower>>  flowers;
-    private Api api;
-    private Disposable disposable;
-    private MutableLiveData<Throwable> errors;
+	private static AppDatabase db;
+	private MutableLiveData<List<Flower>> flowers;
+	private Api api;
+	private CompositeDisposable disposable;
+	private MutableLiveData<Throwable> errors;
 
-    public MutableLiveData<Throwable> getErrors() {
-        return errors;
-    }
+	public FlowerViewModel(@NonNull Application application) {
+		super(application);
+		disposable = new CompositeDisposable();
+		db = AppDatabase.getInstance(application);
+		flowers = new MutableLiveData<>();
+		errors = new MutableLiveData<>();
+		loadData();
+	}
 
-    public LiveData<List<Flower>> getFlowers() {
-        return flowers;
-    }
+	public MutableLiveData<Throwable> getErrors() {
+		return errors;
+	}
 
-    public void clearErrors(){
-        errors.setValue(null);
-    }
+	public LiveData<List<Flower>> getFlowers() {
+		return flowers;
+	}
 
-    public FlowerViewModel(@NonNull Application application) {
-        super(application);
-        db = AppDatabase.getInstance(application);
-        flowers = db.flowerDao().getAllFlowers();
-        errors = new MutableLiveData<>();
-    }
+	public void clearErrors() {
+		errors.setValue(null);
+	}
 
-    @SuppressWarnings("unchecked")
-    private void insertFlowers(List<Flower> flowers){
-        new InsertFlowers().execute(flowers);
-    }
+	@SuppressWarnings("unchecked")
+	private void insertFlowers(List<Flower> flowers) {
+		clearFlowers();
+		if (flowers != null && flowers.size() > 0) {
+			db.flowerDao().insertAllFlowers(flowers);
+		}
+	}
 
-    public static class InsertFlowers extends AsyncTask<List<Flower>,Void,Void>{
-        @SafeVarargs
-        @Override
-        protected final Void doInBackground(List<Flower>... lists) {
-            if (lists != null && lists.length > 0){
-                db.flowerDao().insertAllFlowers(lists[0]);
-            }
-            return null;
-        }
-    }
+	private void clearFlowers() {
+		db.flowerDao().deleteAllFlowers();
+	}
 
-    private void deleteFlowers(){
-        new DeleteFlowers().execute();
-    }
+	private void loadData() {
+		api = Api.getInstance();
+		ApiService apiService = api.apiService();
+		disposable.add(
+			apiService
+				.getFlower()
+				.doOnNext(this::insertFlowers)
+				.onErrorReturn(throwable -> db.flowerDao().getAllFlowers())
+				.subscribeOn(Schedulers.io())
+				.observeOn(AndroidSchedulers.mainThread())
+				.subscribe(
+					result -> {
+						flowers.postValue(result);
+					},
+					throwable ->
+					{
+						errors.setValue(throwable);
+					}
+				)
+		);
+	}
 
-    public static class DeleteFlowers extends AsyncTask<Void,Void,Void>{
-
-        @Override
-        protected Void doInBackground(Void... voids) {
-            db.flowerDao().deleteAllFlowers();
-            return null;
-        }
-    }
-
-    public void loadData(){
-        api = Api.getInstance();
-        ApiService apiService = api.apiService();
-        disposable = apiService.getFlower().subscribeOn(Schedulers.io())
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(new Consumer<List<Flower>>() {
-                    @Override
-                    public void accept(List<Flower> flowers) throws Exception {
-                        deleteFlowers();
-                        insertFlowers(flowers);
-                    }
-                }, new Consumer<Throwable>() {
-                    @Override
-                    public void accept(Throwable throwable) throws Exception {
-                        errors.setValue(throwable);
-                    }
-                });
-    }
-
-    @Override
-    protected void onCleared() {
-        disposable.dispose();
-        super.onCleared();
-    }
+	@Override
+	protected void onCleared() {
+		disposable.dispose();
+		super.onCleared();
+	}
 }

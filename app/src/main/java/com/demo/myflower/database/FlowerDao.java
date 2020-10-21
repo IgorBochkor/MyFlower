@@ -1,6 +1,5 @@
 package com.demo.myflower.database;
 
-import androidx.lifecycle.LiveData;
 import androidx.room.Insert;
 import androidx.room.OnConflictStrategy;
 import androidx.room.Query;
@@ -14,7 +13,7 @@ import java.util.List;
 @androidx.room.Dao
 public interface FlowerDao {
     @Query("SELECT * FROM flower_table")
-    LiveData<List<Flower>> getAllFlowers();
+    List<Flower> getAllFlowers();
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     void insertAllFlowers(List<Flower> flowers);

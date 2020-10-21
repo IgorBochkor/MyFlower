@@ -3,7 +3,6 @@ package com.demo.myflower.screens;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProviders;
-import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import android.content.Intent;
@@ -21,7 +20,7 @@ import com.demo.myflower.adapter.FlowerAdapter;
 public class MainFlowerListActivity extends AppCompatActivity {
 
     private RecyclerView recyclerView;
-    private FlowerAdapter adapter;
+    private FlowerAdapter adapter = new FlowerAdapter();
     private FlowerViewModel flowerViewModel;
     List<Flower> flowers;
 
@@ -30,15 +29,27 @@ public class MainFlowerListActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        recyclerView = findViewById(R.id.recycleView);
-        flowers = new ArrayList<>();
-        LinearLayoutManager layoutManager = new LinearLayoutManager(this, LinearLayoutManager.VERTICAL, false);
-        recyclerView.setLayoutManager(layoutManager);
-        adapter = new FlowerAdapter();
-        adapter.setFlowers(flowers);
-        recyclerView.setAdapter(adapter);
-
         flowerViewModel = ViewModelProviders.of(this).get(FlowerViewModel.class);
+        initViews();
+        initListeners();
+
+        adapter.setFlowerClickListener(new FlowerAdapter.FlowerClickListener() {
+            @Override
+            public void onClick(Flower flower) {
+                Intent intent = new Intent(MainFlowerListActivity.this, FlowersDetail.class);
+                intent.putExtra("flower", flower);
+                startActivity(intent);
+            }
+        });
+    }
+
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+    }
+
+    private void initListeners() {
         flowerViewModel.getFlowers().observe(this, new Observer<List<Flower>>() {
             @Override
             public void onChanged(List<Flower> flowers) {
@@ -56,17 +67,13 @@ public class MainFlowerListActivity extends AppCompatActivity {
                 }
             }
         });
-        flowerViewModel.loadData();
+    }
 
-        adapter.setFlowerClickListener(new FlowerAdapter.FlowerClickListener() {
-            @Override
-            public void onClick(int position) {
-                Flower selectedFlower = adapter.getSelectedFlower(position);
-                Intent intent = new Intent(MainFlowerListActivity.this, FlowersDetail.class);
-                intent.putExtra("flower", selectedFlower);
-                startActivity(intent);
-            }
-        });
+    private void initViews() {
+        recyclerView = findViewById(R.id.rv_flowers);
+        flowers = new ArrayList<>();
+        adapter.setFlowers(flowers);
+        recyclerView.setAdapter(adapter);
     }
 
 }

@@ -49,12 +49,7 @@ public class FlowerAdapter extends RecyclerView.Adapter<FlowerAdapter.FlowerView
     @Override
     public void onBindViewHolder(@NonNull FlowerViewHolder holder, int position) {
         Flower flower = flowers.get(position);
-        holder.textName.setText(flower.getName());
-        holder.textCategory.setText(flower.getCategory());
-        holder.textPrice.setText(flower.getPrice() + "$");
-        Picasso.with(holder.itemView.getContext()).load("https://app-demo-web-august.web.app/pictures/" + flower.getPhoto())
-                .into(holder.imageView);
-
+        holder.bind(flower, flowerClickListener);
     }
 
     @Override
@@ -71,19 +66,32 @@ public class FlowerAdapter extends RecyclerView.Adapter<FlowerAdapter.FlowerView
 
         public FlowerViewHolder(@NonNull View itemView) {
             super(itemView);
+            initViews();
+        }
+
+        private void initViews() {
             textName = itemView.findViewById(R.id.textViewName);
             textCategory = itemView.findViewById(R.id.textCategory);
             textPrice = itemView.findViewById(R.id.textPrice);
             imageView = itemView.findViewById(R.id.imageFlower);
+        }
+
+        public void bind(Flower flower, FlowerClickListener listener) {
+            textName.setText(flower.getName());
+            textCategory.setText(flower.getCategory());
+            textPrice.setText(flower.getPrice() + "$");
+            Picasso.with(itemView.getContext())
+                    .load("https://app-demo-web-august.web.app/pictures/" + flower.getPhoto())
+                    .into(imageView);
+
             itemView.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    if (flowerClickListener != null) {
-                        flowerClickListener.onClick(getLayoutPosition());
+                    if (listener != null) {
+                        listener.onClick(flower);
                     }
                 }
             });
-
         }
     }
 
@@ -92,6 +100,6 @@ public class FlowerAdapter extends RecyclerView.Adapter<FlowerAdapter.FlowerView
     }
 
     public interface FlowerClickListener {
-        void onClick(int position);
+        void onClick(Flower item);
     }
 }
